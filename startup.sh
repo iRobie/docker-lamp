@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ ! -f /etc/php5/php.ini ]; then
+if [ ! -f /etc/php5/apache2/php.ini ]; then
     cp -a /tmp/php5/. /etc/php5/
 fi
 

@@ -1,16 +1,36 @@
-FROM php:5.6-apache
+FROM phusion/baseimage:latest
 
-MAINTAINER Robert Crandall "offlinegeek@outlook.com"
+MAINTAINER Robert Crandall <offlinegeek@outlook.com>
 
-RUN a2enmod rewrite vhost_alias
 
-# install the PHP extensions we need
-RUN apt-get update && apt-get install -y libpng12-dev libjpeg-dev libpq-dev imagemagick libxml2-dev libldap2-dev\
-	&& rm -rf /var/lib/apt/lists/* \
-	&& docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr \
-	&& docker-php-ext-configure ldap --with-libdir=lib/x86_64-linux-gnu \
-	&& docker-php-ext-install gd mbstring pdo pdo_mysql zip exif soap ldap; \
-	rm -rf /tmp/*
+# Install base packages
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -yq install \
+        curl \
+        apache2 \
+        libapache2-mod-php5 \
+        php5-mysql \
+        php5-mcrypt \
+        php5-gd \
+        php5-curl \
+        php-pear \
+        php-apc && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN /usr/sbin/php5enmod mcrypt
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf && \
+    sed -i "s/variables_order.*/variables_order = \"EGPCS\"/g" /etc/php5/apache2/php.ini
 
-VOLUME /usr/local/etc/php
-VOLUME /etc/apache2
+ENV ALLOW_OVERRIDE **False**
+
+# Copy config files to a temporary location, used for restoring default files
+RUN mkdir /tmp/php5/ && mkdir /tmp/apache2/
+RUN cp -a /etc/php5/. /tmp/php5/ && cp -a /etc/apache2/. /tmp/apache2/
+
+# Add image configuration and scripts
+ADD startup.sh /startup.sh
+RUN chmod 755 /*.sh
+
+EXPOSE 80
+
+CMD ["/startup.sh"]
